@@ -32,9 +32,10 @@ export default function SignUp(): JSX.Element {
       });
 
       if (response.ok) {
-        setSuccess('Account created successfully! Redirecting to login...');
+        const data = await response.json(); // Get the user ID from the response
+        setSuccess('Account created successfully! Redirecting to genre selection...');
         setTimeout(() => {
-          router.push('/');
+            router.push(`/genres?userId=${data.userId}`); // Pass userId to genres page
         }, 2000);
       } else {
         const data = await response.json();

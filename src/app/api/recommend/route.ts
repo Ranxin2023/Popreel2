@@ -1,48 +1,65 @@
 import { NextResponse } from "next/server";
-import { MongoClient } from "mongodb";
-import { createSimilarityMatrix, recommendVideos } from "@/lib/recommendation"; // Import helper functions
+import { MongoClient, ObjectId } from "mongodb";
+import { recommendVideos } from "@/lib/recommendation";
 
 interface Video {
   title: string;
   description: string;
-  genres: string;
+  genres: string[] | string; // Handle both array and string types
+}
+
+interface User {
+  _id: ObjectId;
+  favoriteGenres: string[];
 }
 
 export async function GET(req: Request): Promise<NextResponse> {
   const { searchParams } = new URL(req.url);
-  const title = searchParams.get("title");
+  const userId = searchParams.get("userId");
 
-  if (!title) {
-    return NextResponse.json({ error: "Video title is required" }, { status: 400 });
+  if (!userId) {
+    return NextResponse.json({ error: "User ID is required" }, { status: 400 });
   }
 
   const client = new MongoClient(process.env.MONGODB_URI || "mongodb://localhost:27017");
 
   try {
     await client.connect();
-    const db = client.db("Popreel"); // Use the correct database name
-    const collection = db.collection<Video>("videos");
-    const videos = await collection.find({}).toArray();
+    const db = client.db("Popreel");
+    const usersCollection = db.collection<User>("users");
+    const videosCollection = db.collection<Video>("videos");
+
+    // Fetch user details
+    const user = await usersCollection.findOne({ _id: new ObjectId(userId) });
+
+    if (!user || !user.favoriteGenres || user.favoriteGenres.length === 0) {
+      return NextResponse.json({ error: "No favorite genres specified." }, { status: 404 });
+    }
+
+    const favoriteGenres = user.favoriteGenres;
+    console.log(`favorite genres are:${favoriteGenres}`)
+    // Fetch videos matching user's favorite genres
+    const videos = await videosCollection.find({ genres: { $in: favoriteGenres } }).toArray();
 
     if (videos.length === 0) {
-      return NextResponse.json({ error: "No videos found in the database." }, { status: 404 });
+      return NextResponse.json({
+        error: "No videos found matching the user's favorite genres.",
+      }, { status: 404 });
     }
 
-    const videoData = videos.map((video) => ({
-      title: video.title,
-      description: video.description,
-      tags: video.genres.replace(/\|/g, ", "), // Convert genres to a comma-separated string
+    // Normalize genres to arrays and log for debugging
+    const normalizedVideos = videos.map((video) => ({
+      ...video,
+      genres: Array.isArray(video.genres)
+        ? video.genres
+        : video.genres.split(",").map((genre) => genre.trim()), // Convert string to array if needed
     }));
 
-    const similarityMatrix = createSimilarityMatrix(videoData);
+    // console.log("Normalized Videos:", normalizedVideos);
 
-    const videoIndex = videoData.findIndex((video) => video.title === title);
-    if (videoIndex === -1) {
-      return NextResponse.json({ error: `Video with title '${title}' not found.` }, { status: 404 });
-    }
+    // Generate recommendations
+    const recommendations = recommendVideos(favoriteGenres, normalizedVideos);
 
-    const recommendations = recommendVideos(title, videoData, similarityMatrix);
-    console.log("Recommendations are", recommendations)
     return NextResponse.json(recommendations);
   } catch (error) {
     console.error("Error fetching recommendations:", error);

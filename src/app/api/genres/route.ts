@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId  } from 'mongodb';
 
 const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017');
 
@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { userId, genres } = body;
-
+    console.log(`User id:${userId} genres:${genres}`)
     if (!userId || !genres || genres.length === 0) {
       return NextResponse.json({ error: 'User ID and genres are required' }, { status: 400 });
     }
@@ -18,11 +18,12 @@ export async function POST(req: Request) {
 
     // Update user's genres
     const result = await collection.updateOne(
-      { _id: userId }, // Ensure you pass the user's ID during signup or login
+      { _id: new ObjectId(userId) }, // Ensure you pass the user's ID during signup or login
       { $set: { favoriteGenres: genres } }
     );
 
     if (result.modifiedCount === 0) {
+        console.log("fail to modify genres")
       return NextResponse.json({ error: 'Failed to update genres' }, { status: 500 });
     }
 

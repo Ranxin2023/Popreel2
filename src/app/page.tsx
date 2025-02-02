@@ -13,11 +13,25 @@ export default function Home(): JSX.Element {
     event.preventDefault();
     setError(null);
 
-    // Mock authentication logic
-    if (email === 'ranxinli2024@gmail.com' && password === 'password123') {
-      router.push('/tiktok_home');
-    } else {
-      setError('Invalid credentials');
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const { userId } = data; // Get userId from response
+        router.push(`/tiktok_home?userId=${userId}`); // Pass userId to the homepage
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Invalid credentials');
+      }
+    } catch (err) {
+      setError('Failed to log in. Please try again later.');
     }
   };
 
@@ -57,7 +71,7 @@ export default function Home(): JSX.Element {
           </button>
         </form>
         <p className="mt-4 text-center text-gray-600">
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <a
             href="/signup"
             className="text-blue-500 hover:underline"

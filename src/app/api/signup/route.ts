@@ -45,10 +45,12 @@ export async function POST(req: Request): Promise<NextResponse> {
       createdAt: new Date(),
     });
 
+    const userId = result.insertedId;
+
     await client.close();
 
-    // Success response
-    return NextResponse.json({ message: "User created successfully." });
+    // Success response with userId
+    return NextResponse.json({ message: "User created successfully.", userId });
   } catch (error) {
     console.error("Error creating user:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

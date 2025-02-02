@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
+    "ml-distance": "^4.0.1",
+    "ml-knn": "^3.0.0",
     "mongodb": "^6.13.0",
     "natural": "^8.0.1",
     "next": "15.1.6",

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const genresList = [
   'Action', 'Comedy', 'Drama', 'Fantasy', 'Horror',
@@ -11,6 +11,8 @@ const genresList = [
 export default function GenreSelection(): JSX.Element {
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const userId = searchParams.get('userId');
 
   const handleGenreChange = (genre: string) => {
     if (selectedGenres.includes(genre)) {
@@ -21,17 +23,22 @@ export default function GenreSelection(): JSX.Element {
   };
 
   const handleSubmit = async () => {
+    if (!userId) {
+      console.error('User ID is missing');
+      return;
+    }
+
     try {
       const response = await fetch('/api/genres', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ genres: selectedGenres }),
+        body: JSON.stringify({ userId, genres: selectedGenres }),
       });
 
       if (response.ok) {
-        router.push('/tiktok_home'); // Redirect to homepage or dashboard
+        router.push(`/tiktok_home?userId=${userId}`); // Redirect to homepage or dashboard
       } else {
         console.error('Failed to save genres');
       }
